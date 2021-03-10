@@ -50,7 +50,7 @@ defmodule Loadex.Stats do
     sum_stats = Enum.reduce(all_stats,
       %{worker_stats() | last_update_ms: -1},
       fn ({_k, %{last_update_ms: lu} = ws}, %{} = acc) ->
-        if Time.diff(now_ms, lu)  < 60000 do
+        if diff(now_ms, lu)  < 60000 do
           sum_stats(ws, acc)
         else
           acc
@@ -67,6 +67,15 @@ defmodule Loadex.Stats do
   end
 
   # TODO: update and get verification stats
+
+  def now() do
+    Time.utc_now()
+  end
+
+  def diff(t1, t2) do
+    # milliseconds
+    Time.diff(t1, t2) * 1000
+  end
 
   defp calculate_rate(duration_ms, count) do
     case duration_ms > 0 do
@@ -93,10 +102,6 @@ defmodule Loadex.Stats do
       request_rate: areqrate + breqrate,
       entry_rate: aenrate + benrate,
       error_rate: aerrate + berrate}
-  end
-
-  defp now() do
-    Time.utc_now()
   end
 
   defp worker_stats() do
