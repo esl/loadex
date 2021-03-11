@@ -78,9 +78,13 @@ defmodule Loadex.Runner do
     {:reply, :ok, state}
   end
 
-  def handle_info(info, state) do
-    # TODO remove worker if stopped
-    IO.inspect(info)
+  def handle_info({:EXIT, pid, _reason}, state) do
+    Process.unlink(pid)
+    on_worker_terminated(:unknown, pid)
+    {:noreply, state}
+  end
+
+  def handle_info(_info, state) do
     {:noreply, state}
   end
 
