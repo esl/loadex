@@ -6,13 +6,12 @@ defmodule Loadex.Application do
   use Application
 
   def start(_type, _args) do
+    workers = Application.get_env(:loadex, :workers, 10)
+    requests = Application.get_env(:loadex, :requests, [%{method: :get, url: "http://www.google.com"}])
     children = [
-      # Starts a worker by calling: Loadex.Worker.start_link(arg)
-      # {Loadex.Worker, arg}
+      {Loadex.Runner, %{workers: workers, requests: requests}}
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Loadex.Supervisor]
     Supervisor.start_link(children, opts)
   end
