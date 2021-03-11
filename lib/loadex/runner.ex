@@ -1,12 +1,14 @@
 defmodule Loadex.Runner do
   use GenServer
 
+  require Logger
+
   @default_max_sleep_time_ms 200
   @default_verification_percent 3
   @workers_tab :loadex_workers
 
-  def start_link(workers) do
-    GenServer.start_link(__MODULE__, workers, name: __MODULE__)
+  def start_link(config) do
+    GenServer.start_link(__MODULE__, config, name: __MODULE__)
   end
 
   def stop() do
@@ -19,7 +21,7 @@ defmodule Loadex.Runner do
       error_rate: error_rate,
       error_pct: error_percent} = Loadex.Stats.get_stats()
     # TODO check verification stats
-    IO.puts("Req=#{req_rate}/s Submitted=#{entry_rate}/s Err=#{error_rate}/s (#{error_percent}%)")
+    Logger.info("Req=#{req_rate}/s Submitted=#{entry_rate}/s Err=#{error_rate}/s (#{error_percent}%)")
   end
 
   def add(number_of_users) when is_integer(number_of_users) and number_of_users > 0 do
@@ -40,20 +42,20 @@ defmodule Loadex.Runner do
   end
 
   def on_worker_started(module, pid) do
-    IO.puts("Started worker=#{inspect(module)} pid=#{inspect(pid)}")
+    Logger.info("Started worker=#{inspect(module)} pid=#{inspect(pid)}")
     :ets.insert(@workers_tab, {pid})
   end
 
   def on_worker_terminated(module, pid) do
-    IO.puts("Terminated worker=#{inspect(module)} pid=#{inspect(pid)}")
+    Logger.info("Terminated worker=#{inspect(module)} pid=#{inspect(pid)}")
     :ets.delete(@workers_tab, pid)
   end
 
-  def init(workers) do
+  def init(%{workers: workers, requests: requests}) do
     Process.flag(:trap_exit, :true)
     Loadex.Stats.init()
     :ets.new(@workers_tab, [:named_table, :public, :bag])
-    state = %{sleep_ms: @default_max_sleep_time_ms, verify_percent: @default_verification_percent}
+    state = %{sleep_ms: @default_max_sleep_time_ms, verify_percent: @default_verification_percent, requests: requests}
     Enum.each(1..workers, fn _ -> create_worker(state) end)
     :timer.apply_interval(10000, __MODULE__, :print_stats, [])
     # TODO: get values from app config
@@ -88,9 +90,9 @@ defmodule Loadex.Runner do
     {:noreply, state}
   end
 
-  defp create_worker(%{sleep_ms: sleep_ms}) do
+  defp create_worker(%{sleep_ms: sleep_ms, requests: requests}) do
     # TODO: supervisor
-    {:ok, pid} = Loadex.Worker.start_link(%{sleep_time: sleep_ms})
+    {:ok, pid} = Loadex.Worker.start_link(%{sleep_time: sleep_ms, requests: requests})
     Process.link(pid)
   end
 
