@@ -3,16 +3,22 @@ defmodule Loadex do
   Documentation for `Loadex`.
   """
 
-  @doc """
-  Hello world.
+  @config_table :loadex_config
 
-  ## Examples
+  def init_config_table() do
+    :ets.new(@config_table, [:named_table, :public])
+  end
 
-      iex> Loadex.hello()
-      :world
+  def add_config(config) do
+    :ets.insert(@config_table, {config})
+  end
 
-  """
-  def hello do
-    :world
+  def start() do
+    workers = Application.get_env(:loadex, :workers, 10)
+    Loadex.Runner.start_link(%{workers: workers})
+  end
+
+  def stop() do
+    Loadex.Runner.stop()
   end
 end

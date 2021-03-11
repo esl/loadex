@@ -5,6 +5,7 @@ defmodule Loadex.Runner do
 
   @default_max_sleep_time_ms 200
   @default_verification_percent 3
+  @config_table :loadex_config
   @workers_tab :loadex_workers
 
   def start_link(config) do
@@ -51,11 +52,11 @@ defmodule Loadex.Runner do
     :ets.delete(@workers_tab, pid)
   end
 
-  def init(%{workers: workers, requests: requests}) do
+  def init(%{workers: workers}) do
     Process.flag(:trap_exit, :true)
     Loadex.Stats.init()
     :ets.new(@workers_tab, [:named_table, :public, :bag])
-    state = %{sleep_ms: @default_max_sleep_time_ms, verify_percent: @default_verification_percent, requests: requests}
+    state = %{sleep_ms: @default_max_sleep_time_ms, verify_percent: @default_verification_percent}
     Enum.each(1..workers, fn _ -> create_worker(state) end)
     :timer.apply_interval(10000, __MODULE__, :print_stats, [])
     # TODO: get values from app config
@@ -90,10 +91,16 @@ defmodule Loadex.Runner do
     {:noreply, state}
   end
 
-  defp create_worker(%{sleep_ms: sleep_ms, requests: requests}) do
+  defp create_worker(%{sleep_ms: sleep_ms}) do
     # TODO: supervisor
-    {:ok, pid} = Loadex.Worker.start_link(%{sleep_time: sleep_ms, requests: requests})
-    Process.link(pid)
+    case :ets.first(@config_table) do
+      %{requests: requests} = key ->
+        {:ok, pid} = Loadex.Worker.start_link(%{sleep_time: sleep_ms, requests: requests})
+        :ets.delete(@config_table, key)
+        Process.link(pid)
+      _ ->
+        Logger.error("no more worker config data")
+    end
   end
 
   defp stop_users(count, [{pid} | workers]) when count > 0 do

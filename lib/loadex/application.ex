@@ -6,10 +6,10 @@ defmodule Loadex.Application do
   use Application
 
   def start(_type, _args) do
-    workers = Application.get_env(:loadex, :workers, 10)
-    requests = Application.get_env(:loadex, :requests, [%{method: :get, url: "http://www.google.com"}])
+#    workers = Application.get_env(:loadex, :workers, 10)
+    Loadex.init_config_table()
     children = [
-      {Loadex.Runner, %{workers: workers, requests: requests}}
+#      {Loadex.Runner, %{workers: workers}}
     ]
 
     opts = [strategy: :one_for_one, name: Loadex.Supervisor]
