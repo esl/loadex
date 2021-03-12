@@ -49,9 +49,9 @@ defmodule Loadex.Worker do
     request = Enum.at(requests, next_request)
     params = case Map.get(request, :body) do
                nil ->
-                 [method: request.method, url: request.url]
+                 [method: request.method, url: request.url, headers: request.headers]
                body ->
-                 [method: request.method, url: request.url, body: body]
+                 [method: request.method, url: request.url, headers: request.headers, body: body]
              end
     res = Tesla.request(params)
     {res, %{state | next_request: rem(next_request + 1, length(requests))}}
