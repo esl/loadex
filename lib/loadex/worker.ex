@@ -98,7 +98,7 @@ defmodule Loadex.Worker do
     now_ms = Loadex.Stats.now()
     duration_ms = Loadex.Stats.diff(now_ms, last)
 
-    case duration_ms > @periodic_stats_min_duration_ms do
+    case duration_ms > @stats_min_duration do
       false ->
         state
 
