@@ -1,6 +1,10 @@
 # loadex
 simple small open load generator
 
+## Description
+
+Traffic generator tool for HTTP backends.
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed

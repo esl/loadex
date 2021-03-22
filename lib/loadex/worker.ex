@@ -23,15 +23,20 @@ defmodule Loadex.Worker do
     Loadex.Stats.register_worker()
     # TODO: notify stat on running clients
     Loadex.Runner.on_worker_started(__MODULE__, self())
-    send(self(), :loop) # configure list of requests
-    {:ok, %{sleep_time: sleep_time,
-            stats_last_ms: Loadex.Stats.now(),
-            stats_reqs: 0,
-            stats_entries: 0,
-            stats_errors: 0,
-            verify_percent: 3,
-            requests: requests,
-            next_request: 0}}
+    # configure list of requests
+    send(self(), :loop)
+
+    {:ok,
+     %{
+       sleep_time: sleep_time,
+       stats_last_ms: Loadex.Stats.now(),
+       stats_reqs: 0,
+       stats_entries: 0,
+       stats_errors: 0,
+       verify_percent: 3,
+       requests: requests,
+       next_request: 0
+     }}
   end
 
   @impl GenServer
@@ -51,19 +56,23 @@ defmodule Loadex.Worker do
     # increase stats_reqs in state
     state = %{state | stats_reqs: state.stats_reqs + 1}
     Process.send_after(self(), :loop, state.sleep_time)
-    {res, state}  = send_request(state)
+    {res, state} = send_request(state)
     state = handle_result(res, state)
     {:noreply, state}
   end
 
   defp send_request(%{next_request: next_request, requests: requests} = state) do
     request = Enum.at(requests, next_request)
-    params = case Map.get(request, :body) do
-               nil ->
-                 [method: request.method, url: request.url, headers: request.headers]
-               body ->
-                 [method: request.method, url: request.url, headers: request.headers, body: body]
-             end
+
+    params =
+      case Map.get(request, :body) do
+        nil ->
+          [method: request.method, url: request.url, headers: request.headers]
+
+        body ->
+          [method: request.method, url: request.url, headers: request.headers, body: body]
+      end
+
     res = Tesla.request(params)
     {res, %{state | next_request: rem(next_request + 1, length(requests))}}
   end
@@ -82,20 +91,25 @@ defmodule Loadex.Worker do
     %{state | stats_errors: state.stats_errors + 1}
   end
 
-  defp maybe_send_stats(%{stats_last_ms: last,
-                          stats_entries: entries,
-                          stats_errors: errors,
-                          stats_reqs: reqs} = state) do
+  defp maybe_send_stats(
+         %{stats_last_ms: last, stats_entries: entries, stats_errors: errors, stats_reqs: reqs} =
+           state
+       ) do
     now_ms = Loadex.Stats.now()
     duration_ms = Loadex.Stats.diff(now_ms, last)
+
     case duration_ms > @periodic_stats_min_duration_ms do
       false ->
         state
+
       true ->
-        Loadex.Stats.update_stats(%{req_count: reqs,
-                                    entry_count: entries,
-                                    error_count: errors,
-                                    duration_since_last_update: duration_ms})
+        Loadex.Stats.update_stats(%{
+          req_count: reqs,
+          entry_count: entries,
+          error_count: errors,
+          duration_since_last_update: duration_ms
+        })
+
         %{state | stats_last_ms: now_ms, stats_entries: 0, stats_errors: 0, stats_reqs: 0}
     end
   end

@@ -23,6 +23,6 @@ defmodule Loadex.MixProject do
   defp deps do
     [
       {:tesla, "~> 1.3"}
-   ]
+    ]
   end
 end

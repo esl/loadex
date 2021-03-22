@@ -21,12 +21,17 @@ defmodule Loadex.Runner do
 
   @doc "Print stats to console. Triggered periodically."
   def print_stats() do
-    %{request_rate: req_rate,
+    %{
+      request_rate: req_rate,
       entry_rate: entry_rate,
       error_rate: error_rate,
-      error_pct: error_percent} = Loadex.Stats.get_stats()
+      error_pct: error_percent
+    } = Loadex.Stats.get_stats()
+
     # TODO check verification stats
-    Logger.info("Req=#{req_rate}/s Submitted=#{entry_rate}/s Err=#{error_rate}/s (#{error_percent}%)")
+    Logger.info(
+      "Req=#{req_rate}/s Submitted=#{entry_rate}/s Err=#{error_rate}/s (#{error_percent}%)"
+    )
   end
 
   @doc "Add a number of new users (workers) to the load test."
@@ -62,7 +67,7 @@ defmodule Loadex.Runner do
 
   @impl GenServer
   def init(%{workers: workers}) do
-    Process.flag(:trap_exit, :true)
+    Process.flag(:trap_exit, true)
     Loadex.Stats.init()
     :ets.new(@workers_tab, [:named_table, :public, :bag])
     state = %{sleep_ms: @default_max_sleep_time_ms, verify_percent: @default_verification_percent}
@@ -84,6 +89,7 @@ defmodule Loadex.Runner do
       send(pid, :stop)
       :ets.delete(@workers_tab, pid)
     end)
+
     {:stop, :normal, state}
   end
 
@@ -110,6 +116,7 @@ defmodule Loadex.Runner do
         {:ok, pid} = Loadex.Worker.start_link(%{sleep_time: sleep_ms, requests: requests})
         :ets.delete(@config_table, key)
         Process.link(pid)
+
       _ ->
         Logger.error("no more worker config data")
     end

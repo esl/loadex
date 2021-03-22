@@ -23,18 +23,22 @@ defmodule Loadex.Stats do
   error_count: number of failed requessts
   duration_since_last_update: milliseconds after latest stats update
   """
-  def update_stats(%{req_count: req_count,
-                     entry_count: entry_count,
-                     error_count: error_count,
-                     duration_since_last_update: duration_ms}) do
+  def update_stats(%{
+        req_count: req_count,
+        entry_count: entry_count,
+        error_count: error_count,
+        duration_since_last_update: duration_ms
+      }) do
     self_pid = self()
-    stats = case :ets.lookup(@stats_tab, self_pid) do
-              [{^self_pid, stats_rec}] -> stats_rec
-              [] -> worker_stats()
-            end
-    %{request_count: total_requests,
-      error_count: total_errors,
-      entry_count: total_entries} = stats
+
+    stats =
+      case :ets.lookup(@stats_tab, self_pid) do
+        [{^self_pid, stats_rec}] -> stats_rec
+        [] -> worker_stats()
+      end
+
+    %{request_count: total_requests, error_count: total_errors, entry_count: total_entries} =
+      stats
 
     total_requests = total_requests + req_count
     total_entries = total_entries + entry_count
@@ -47,14 +51,17 @@ defmodule Loadex.Stats do
 
     # metrics notify: request_rate, ingestion_rate, error_rate
 
-    stats = %{stats |
-              request_count: total_requests,
-              entry_count: total_entries,
-              error_count: total_errors,
-              entry_rate: ingestion_rate,
-              request_rate: request_rate,
-              error_rate: error_rate,
-              last_update_ms: now_ms}
+    stats = %{
+      stats
+      | request_count: total_requests,
+        entry_count: total_entries,
+        error_count: total_errors,
+        entry_rate: ingestion_rate,
+        request_rate: request_rate,
+        error_rate: error_rate,
+        last_update_ms: now_ms
+    }
+
     :ets.insert(@stats_tab, {self_pid, stats})
   end
 
@@ -62,22 +69,29 @@ defmodule Loadex.Stats do
   def get_stats() do
     all_stats = :ets.tab2list(@stats_tab)
     now_ms = now()
-    sum_stats = Enum.reduce(all_stats,
-      %{worker_stats() | last_update_ms: -1},
-      fn ({_k, %{last_update_ms: lu} = ws}, %{} = acc) ->
-        if diff(now_ms, lu)  < 60000 do
-          sum_stats(ws, acc)
-        else
-          acc
+
+    sum_stats =
+      Enum.reduce(
+        all_stats,
+        %{worker_stats() | last_update_ms: -1},
+        fn {_k, %{last_update_ms: lu} = ws}, %{} = acc ->
+          if diff(now_ms, lu) < 60000 do
+            sum_stats(ws, acc)
+          else
+            acc
+          end
         end
-      end)
+      )
 
     total_requests = sum_stats.request_count
     error_count = sum_stats.error_count
-    error_pct = case total_requests do
-                  0 -> 0.0
-                  _ -> error_count * 100.0 / total_requests
-                end
+
+    error_pct =
+      case total_requests do
+        0 -> 0.0
+        _ -> error_count * 100.0 / total_requests
+      end
+
     Map.put(sum_stats, :error_pct, error_pct)
   end
 
@@ -100,33 +114,43 @@ defmodule Loadex.Stats do
     end
   end
 
-  defp sum_stats(%{request_count: arc,
-                   entry_count: aenc,
-                   error_count: aerc,
-                   request_rate: areqrate,
-                   entry_rate: aenrate,
-                   error_rate: aerrate},
-    %{request_count: brc,
-      entry_count: benc,
-      error_count: berc,
-      request_rate: breqrate,
-      entry_rate: benrate,
-      error_rate: berrate}) do
-    %{request_count: arc + brc,
+  defp sum_stats(
+         %{
+           request_count: arc,
+           entry_count: aenc,
+           error_count: aerc,
+           request_rate: areqrate,
+           entry_rate: aenrate,
+           error_rate: aerrate
+         },
+         %{
+           request_count: brc,
+           entry_count: benc,
+           error_count: berc,
+           request_rate: breqrate,
+           entry_rate: benrate,
+           error_rate: berrate
+         }
+       ) do
+    %{
+      request_count: arc + brc,
       entry_count: aenc + benc,
       error_count: aerc + berc,
       request_rate: areqrate + breqrate,
       entry_rate: aenrate + benrate,
-      error_rate: aerrate + berrate}
+      error_rate: aerrate + berrate
+    }
   end
 
   defp worker_stats() do
-    %{last_update_ms: now(),
+    %{
+      last_update_ms: now(),
       request_count: 0,
       entry_count: 0,
       error_count: 0,
       request_rate: 0.0,
       entry_rate: 0.0,
-      error_rate: 0.0}
+      error_rate: 0.0
+    }
   end
 end
