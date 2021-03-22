@@ -22,7 +22,7 @@ config :loadex,
 
 The config table is initialized when the application starts. You can add a list of requests for each user via the following command. Note that each user config is unique and used only once. When a user config is used in a worker, it is removed from the config table. Make sure you have enough user configuration items in the table before starting the required number of workers.
 ```
-Loadex.add_config(requests: [request1, request2, ...])
+Loadex.add_config(%{requests: [request1, request2, ...]})
 ```
 Where each request is according to the following format:
 ```
