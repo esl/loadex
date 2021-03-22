@@ -14,6 +14,7 @@ config :loadex,
   workers: 10,                # number of user sessions
   max_sleep_time: 200,        # delay between 2 requests from 1 user (ms)
   stats_min_duration: 1000,   # frequency (ms) of updating statistics
+  stats_print_period: 10000,  # frequency (ms) of displaying statistics
   verification_percent: 3     # verification percentage (not used yet)
 ```
 
