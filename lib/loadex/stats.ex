@@ -1,14 +1,28 @@
 defmodule Loadex.Stats do
+  @moduledoc """
+  Statistics module for Loadex.
+  The stats data is fetched from workers periodically and stored in an ETS table.
+  The actual number of sent requests with successful and error responses are printed out to console.
+  """
   @stats_tab :loadex_stats
 
+  @doc "Initialize stats ETS table."
   def init() do
     :ets.new(@stats_tab, [:named_table, :public])
   end
 
+  @doc "Add a new worker to the configuration."
   def register_worker() do
     :ets.insert(@stats_tab, {self(), worker_stats()})
   end
 
+  @doc """
+  Update stats data with new entries.
+  req_count: number of sent requests
+  entry_count: number of successful requests
+  error_count: number of failed requessts
+  duration_since_last_update: milliseconds after latest stats update
+  """
   def update_stats(%{req_count: req_count,
                      entry_count: entry_count,
                      error_count: error_count,
@@ -44,6 +58,7 @@ defmodule Loadex.Stats do
     :ets.insert(@stats_tab, {self_pid, stats})
   end
 
+  @doc "Retrieve current stats data from ETS table."
   def get_stats() do
     all_stats = :ets.tab2list(@stats_tab)
     now_ms = now()
@@ -68,12 +83,13 @@ defmodule Loadex.Stats do
 
   # TODO: update and get verification stats
 
+  @doc "Current UTC time in internal format."
   def now() do
     Time.utc_now()
   end
 
+  @doc "Difference between 2 internal timestamps in milliseconds."
   def diff(t1, t2) do
-    # milliseconds
     Time.diff(t1, t2) * 1000
   end
 

@@ -1,14 +1,22 @@
 defmodule Loadex.Worker do
+  @moduledoc """
+  Each user corresponds to a Worker in Loadex.
+  The worker is initialized with a list of HTTP requests that are sent periodically in a worker process.
+  The selection of next request and result handling is managed via handle_info callbacks.
+  """
   use GenServer
 
   require Logger
 
   @periodic_stats_min_duration_ms 1000
 
+  @doc "Start Worker."
   def start_link(config) do
     GenServer.start_link(__MODULE__, config)
   end
 
+  @doc "Initialize worker state based on configuration: sleep time and list of requests."
+  @impl GenServer
   def init(%{sleep_time: sleep_time, requests: requests}) do
     # TODO: get config
     # TODO: create connection
@@ -26,6 +34,7 @@ defmodule Loadex.Worker do
             next_request: 0}}
   end
 
+  @impl GenServer
   def handle_info(:loop, state) do
     loop(state)
   end
@@ -35,6 +44,8 @@ defmodule Loadex.Worker do
     {:stop, :normal, state}
   end
 
+  ### Entry point of request loop. Increases the number of sent requests for stats, sends request to the server,
+  ### handles result of message sending and schedules next request."
   defp loop(state) do
     state = maybe_send_stats(state)
     # increase stats_reqs in state

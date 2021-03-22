@@ -1,4 +1,5 @@
 defmodule Loadex.Runner do
+  @moduledoc "Runner module that handles organization of workers simulating a user."
   use GenServer
 
   require Logger
@@ -8,14 +9,17 @@ defmodule Loadex.Runner do
   @config_table :loadex_config
   @workers_tab :loadex_workers
 
+  @doc "Start Runner with config: %{workers: number_of_workers_at_start}."
   def start_link(config) do
     GenServer.start_link(__MODULE__, config, name: __MODULE__)
   end
 
+  @doc "Stop Runner."
   def stop() do
     GenServer.call(__MODULE__, :stop)
   end
 
+  @doc "Print stats to console. Triggered periodically."
   def print_stats() do
     %{request_rate: req_rate,
       entry_rate: entry_rate,
@@ -25,6 +29,7 @@ defmodule Loadex.Runner do
     Logger.info("Req=#{req_rate}/s Submitted=#{entry_rate}/s Err=#{error_rate}/s (#{error_percent}%)")
   end
 
+  @doc "Add a number of new users (workers) to the load test."
   def add(number_of_users) when is_integer(number_of_users) and number_of_users > 0 do
     GenServer.call(__MODULE__, {:add_users, number_of_users})
   end
@@ -33,6 +38,7 @@ defmodule Loadex.Runner do
     :invalid_input
   end
 
+  @doc "Remove a number of active workers."
   def remove(count) when is_integer(count) and count > 0 do
     workers = :ets.tab2list(@workers_tab)
     stop_users(count, workers)
@@ -42,16 +48,19 @@ defmodule Loadex.Runner do
     :invalid_input
   end
 
+  @doc "Send notification to ETS when a worker is started."
   def on_worker_started(module, pid) do
     Logger.info("Started worker=#{inspect(module)} pid=#{inspect(pid)}")
     :ets.insert(@workers_tab, {pid})
   end
 
+  @doc "Send notification to ETS when a worker is terminated."
   def on_worker_terminated(module, pid) do
     Logger.info("Terminated worker=#{inspect(module)} pid=#{inspect(pid)}")
     :ets.delete(@workers_tab, pid)
   end
 
+  @impl GenServer
   def init(%{workers: workers}) do
     Process.flag(:trap_exit, :true)
     Loadex.Stats.init()
@@ -63,6 +72,7 @@ defmodule Loadex.Runner do
     {:ok, state}
   end
 
+  @impl GenServer
   def handle_call({:add_users, number_of_users}, _from, state) do
     Enum.each(1..number_of_users, fn _ -> create_worker(state) end)
     {:reply, :ok, state}
@@ -81,6 +91,8 @@ defmodule Loadex.Runner do
     {:reply, :ok, state}
   end
 
+  @doc "Detect when a worker is termiated."
+  @impl GenServer
   def handle_info({:EXIT, pid, _reason}, state) do
     Process.unlink(pid)
     on_worker_terminated(:unknown, pid)
