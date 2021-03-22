@@ -8,7 +8,7 @@ defmodule Loadex.Worker do
 
   require Logger
 
-  @periodic_stats_min_duration_ms 1000
+  @stats_min_duration Application.get_env(:loadex, :stats_min_duration, 10000)
 
   @doc "Start Worker."
   def start_link(config) do

@@ -4,8 +4,8 @@ defmodule Loadex.Runner do
 
   require Logger
 
-  @default_max_sleep_time_ms 200
-  @default_verification_percent 3
+  @max_sleep_time Application.get_env(:loadex, :max_sleep_time, 200)
+  @verification_percent Application.get_env(:loadex, :verification_percent, 3)
   @config_table :loadex_config
   @workers_tab :loadex_workers
 
@@ -70,7 +70,7 @@ defmodule Loadex.Runner do
     Process.flag(:trap_exit, true)
     Loadex.Stats.init()
     :ets.new(@workers_tab, [:named_table, :public, :bag])
-    state = %{sleep_ms: @default_max_sleep_time_ms, verify_percent: @default_verification_percent}
+    state = %{sleep_ms: @max_sleep_time, verify_percent: @verification_percent}
     Enum.each(1..workers, fn _ -> create_worker(state) end)
     :timer.apply_interval(10000, __MODULE__, :print_stats, [])
     # TODO: get values from app config
